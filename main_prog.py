@@ -8,7 +8,7 @@ intents.messages = True
 intents.guilds = True 
 intents.message_content = True 
 client = commands.Bot(command_prefix = '!', intents=intents)
-with open('./token.txt', 'r') as file:
+with open('../Api keys/token.txt', 'r') as file:
     token = file.read()
 
 @client.event
