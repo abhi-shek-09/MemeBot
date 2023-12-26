@@ -4,16 +4,16 @@ import asyncio
 from get_data import send_link
 
 intents = discord.Intents.default()
-intents.messages = True 
-intents.guilds = True 
-intents.message_content = True 
+intents.messages = True
+intents.guilds = True
+intents.message_content = True
 client = commands.Bot(command_prefix='!', intents=intents)
 
 with open('../Api keys/token.txt', 'r') as file:
     token = file.read()
 
-# Dictionary to store user inputs
 user_inputs = {}
+user_votes = {}
 
 @client.event
 async def on_ready():
@@ -21,13 +21,8 @@ async def on_ready():
 
 @client.command()
 async def play(ctx):
-    # Send link
     link_message = await ctx.send(f"{send_link()} \n Your 10 seconds start now")
-
-    # Wait for 30 seconds
     await asyncio.sleep(10)
-
-    # Collect user input
     await ctx.send("Enter your text within the next 10 seconds:")
 
     def check(message):
@@ -36,19 +31,36 @@ async def play(ctx):
     try:
         response = await client.wait_for('message', timeout=10.0, check=check)
         user_inputs[ctx.author.name] = response.content
-        await response.delete()  # Remove the user's input message from the channel
+        await response.delete()
         await ctx.author.send(f"Your input: {response.content}")
     except asyncio.TimeoutError:
         await ctx.send("Time's up! No input received.")
 
-    # Send summary DM to everyone
+    
     summary = "\n".join(f"{user}: {text}" for user, text in user_inputs.items())
-    for user in user_inputs:
-        member = ctx.guild.get_member_named(user)
-        if member:
-            await member.send(f"Summary:\n{summary}")
+    summary_message = await ctx.send(f"Here are everyone's inputs:\n{summary}")
 
-    # Clear user inputs for the next round
+    await asyncio.sleep(10)
+    await ctx.send("Type the username of the person with the best message:")
+
+    def vote_check(message):
+        return message.channel == ctx.channel
+
+    try:
+        vote_message = await client.wait_for('message', timeout=20.0, check=vote_check)
+        best_user = vote_message.content
+        if best_user in user_votes:
+            user_votes[best_user] += 1
+        else:
+            user_votes[best_user] = 1
+    except asyncio.TimeoutError:
+        pass
+
+    await ctx.send("Tally of votes:")
+    for user, votes in user_votes.items():
+        await ctx.send(f"{user}: {votes} vote(s)")
+
     user_inputs.clear()
+    user_votes.clear()
 
 client.run(token=token)
